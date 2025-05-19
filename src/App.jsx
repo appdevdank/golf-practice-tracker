@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
 
 const drills = [
   {
@@ -42,6 +44,11 @@ const App = () => {
     const saved = localStorage.getItem("golfPracticeResults");
     return saved ? JSON.parse(saved) : Array(drills.length).fill("");
   });
+  const [history, setHistory] = useState(() => {
+    const h = localStorage.getItem("golfPracticeHistory");
+    return h ? JSON.parse(h) : {};
+  });
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   useEffect(() => {
     let timer;
@@ -57,6 +64,14 @@ const App = () => {
   useEffect(() => {
     localStorage.setItem("golfPracticeResults", JSON.stringify(results));
   }, [results]);
+
+  const saveSession = () => {
+    const dateKey = new Date().toISOString().split('T')[0];
+    const newHistory = { ...history, [dateKey]: results };
+    setHistory(newHistory);
+    localStorage.setItem("golfPracticeHistory", JSON.stringify(newHistory));
+    resetPractice();
+  };
 
   const nextStep = () => {
     const next = step + 1;
@@ -86,12 +101,24 @@ const App = () => {
     return (
       <div className="max-w-xl mx-auto p-6 text-center">
         <h1 className="text-3xl font-bold mb-4">Golf Practice Tracker</h1>
-        <p className="mb-4">Follow a structured routine for your practice session.</p>
+        <Calendar onChange={setSelectedDate} value={selectedDate} className="mb-4 mx-auto" />
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold mb-2">Session History</h2>
+          {history[selectedDate.toISOString().split('T')[0]] ? (
+            <ul className="text-left list-disc list-inside">
+              {history[selectedDate.toISOString().split('T')[0]].map((res, idx) => (
+                <li key={idx}><strong>{drills[idx].title}:</strong> {res}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>No session on this day.</p>
+          )}
+        </div>
         <button
           className="bg-blue-600 text-white px-6 py-3 rounded"
           onClick={() => setStarted(true)}
         >
-          Start Practice
+          Start New Session
         </button>
       </div>
     );
@@ -128,13 +155,21 @@ const App = () => {
         >
           {running ? "Pause" : "Start"}
         </button>
-        <button
-          className="bg-green-600 text-white px-4 py-2 rounded"
-          onClick={nextStep}
-          disabled={step === drills.length - 1}
-        >
-          Next Drill
-        </button>
+        {step < drills.length - 1 ? (
+          <button
+            className="bg-green-600 text-white px-4 py-2 rounded"
+            onClick={nextStep}
+          >
+            Next Drill
+          </button>
+        ) : (
+          <button
+            className="bg-green-700 text-white px-4 py-2 rounded"
+            onClick={saveSession}
+          >
+            Save Session
+          </button>
+        )}
         <button
           className="bg-gray-600 text-white px-4 py-2 rounded"
           onClick={resetPractice}
