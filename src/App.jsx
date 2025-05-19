@@ -37,6 +37,11 @@ const App = () => {
   const [step, setStep] = useState(0);
   const [seconds, setSeconds] = useState(drills[0].time);
   const [running, setRunning] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [results, setResults] = useState(() => {
+    const saved = localStorage.getItem("golfPracticeResults");
+    return saved ? JSON.parse(saved) : Array(drills.length).fill("");
+  });
 
   useEffect(() => {
     let timer;
@@ -49,6 +54,10 @@ const App = () => {
     return () => clearInterval(timer);
   }, [running, seconds]);
 
+  useEffect(() => {
+    localStorage.setItem("golfPracticeResults", JSON.stringify(results));
+  }, [results]);
+
   const nextStep = () => {
     const next = step + 1;
     if (next < drills.length) {
@@ -58,26 +67,81 @@ const App = () => {
     }
   };
 
+  const resetPractice = () => {
+    setStep(0);
+    setSeconds(drills[0].time);
+    setRunning(false);
+    setStarted(false);
+    setResults(Array(drills.length).fill(""));
+    localStorage.removeItem("golfPracticeResults");
+  };
+
+  const handleResultChange = (e) => {
+    const newResults = [...results];
+    newResults[step] = e.target.value;
+    setResults(newResults);
+  };
+
+  if (!started) {
+    return (
+      <div className="max-w-xl mx-auto p-6 text-center">
+        <h1 className="text-3xl font-bold mb-4">Golf Practice Tracker</h1>
+        <p className="mb-4">Follow a structured routine for your practice session.</p>
+        <button
+          className="bg-blue-600 text-white px-6 py-3 rounded"
+          onClick={() => setStarted(true)}
+        >
+          Start Practice
+        </button>
+      </div>
+    );
+  }
+
+  const progressPercent = Math.round(((step + 1) / drills.length) * 100);
+
   return (
     <div className="max-w-xl mx-auto p-6">
+      <div className="w-full bg-gray-200 h-2 rounded-full mb-4">
+        <div
+          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+          style={{ width: `${progressPercent}%` }}
+        ></div>
+      </div>
+
       <h1 className="text-2xl font-bold mb-4">{drills[step].title}</h1>
       <p className="mb-4">{drills[step].instructions}</p>
       <div className="text-4xl font-mono mb-4">
         {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}
       </div>
-      <button
-        className="bg-blue-600 text-white px-4 py-2 rounded mr-2"
-        onClick={() => setRunning(!running)}
-      >
-        {running ? "Pause" : "Start"}
-      </button>
-      <button
-        className="bg-green-600 text-white px-4 py-2 rounded"
-        onClick={nextStep}
-        disabled={step === drills.length - 1}
-      >
-        Next Drill
-      </button>
+
+      <textarea
+        className="w-full p-2 border rounded mb-4"
+        placeholder="Enter your result or notes for this drill"
+        value={results[step]}
+        onChange={handleResultChange}
+      />
+
+      <div className="flex gap-4">
+        <button
+          className="bg-blue-600 text-white px-4 py-2 rounded"
+          onClick={() => setRunning(!running)}
+        >
+          {running ? "Pause" : "Start"}
+        </button>
+        <button
+          className="bg-green-600 text-white px-4 py-2 rounded"
+          onClick={nextStep}
+          disabled={step === drills.length - 1}
+        >
+          Next Drill
+        </button>
+        <button
+          className="bg-gray-600 text-white px-4 py-2 rounded"
+          onClick={resetPractice}
+        >
+          Home
+        </button>
+      </div>
     </div>
   );
 };
