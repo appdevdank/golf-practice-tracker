@@ -44,6 +44,10 @@ const App = () => {
     const saved = localStorage.getItem("golfPracticeResults");
     return saved ? JSON.parse(saved) : Array(drills.length).fill("");
   });
+  const [completed, setCompleted] = useState(() => {
+    const saved = localStorage.getItem("golfPracticeCompleted");
+    return saved ? JSON.parse(saved) : Array(drills.length).fill(false);
+  });
   const [history, setHistory] = useState(() => {
     const h = localStorage.getItem("golfPracticeHistory");
     return h ? JSON.parse(h) : {};
@@ -65,9 +69,13 @@ const App = () => {
     localStorage.setItem("golfPracticeResults", JSON.stringify(results));
   }, [results]);
 
+  useEffect(() => {
+    localStorage.setItem("golfPracticeCompleted", JSON.stringify(completed));
+  }, [completed]);
+
   const saveSession = () => {
     const dateKey = new Date().toISOString().split('T')[0];
-    const newHistory = { ...history, [dateKey]: results };
+    const newHistory = { ...history, [dateKey]: { results, completed } };
     setHistory(newHistory);
     localStorage.setItem("golfPracticeHistory", JSON.stringify(newHistory));
     resetPractice();
@@ -88,13 +96,21 @@ const App = () => {
     setRunning(false);
     setStarted(false);
     setResults(Array(drills.length).fill(""));
+    setCompleted(Array(drills.length).fill(false));
     localStorage.removeItem("golfPracticeResults");
+    localStorage.removeItem("golfPracticeCompleted");
   };
 
   const handleResultChange = (e) => {
     const newResults = [...results];
     newResults[step] = e.target.value;
     setResults(newResults);
+  };
+
+  const handleCompletedChange = (e) => {
+    const newCompleted = [...completed];
+    newCompleted[step] = e.target.checked;
+    setCompleted(newCompleted);
   };
 
   if (!started) {
@@ -106,8 +122,10 @@ const App = () => {
           <h2 className="text-xl font-semibold mb-2">Session History</h2>
           {history[selectedDate.toISOString().split('T')[0]] ? (
             <ul className="text-left list-disc list-inside">
-              {history[selectedDate.toISOString().split('T')[0]].map((res, idx) => (
-                <li key={idx}><strong>{drills[idx].title}:</strong> {res}</li>
+              {history[selectedDate.toISOString().split('T')[0]].results.map((res, idx) => (
+                <li key={idx}>
+                  <strong>{drills[idx].title}:</strong> {res} {history[selectedDate.toISOString().split('T')[0]].completed[idx] ? '(Completed)' : '(Incomplete)'}
+                </li>
               ))}
             </ul>
           ) : (
@@ -147,6 +165,16 @@ const App = () => {
         value={results[step]}
         onChange={handleResultChange}
       />
+
+      <label className="flex items-center mb-4">
+        <input
+          type="checkbox"
+          className="mr-2"
+          checked={completed[step]}
+          onChange={handleCompletedChange}
+        />
+        Mark as Completed
+      </label>
 
       <div className="flex gap-4">
         <button
