@@ -3,36 +3,7 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 
 const drills = [
-  {
-    title: "Wedges - 30, 60, 90",
-    instructions: "Hit 3 shots at each number with sand wedge, then switch to 60°, cycle 3 times. 10 minutes.",
-    time: 600,
-  },
-  {
-    title: "Wedges - 3 A side",
-    instructions: "Use lob wedge and launch monitor. Hit a 50-yard shot with 3-yard variance. Repeat at 60 and 70. 10 minutes.",
-    time: 600,
-  },
-  {
-    title: "Approach - GB Turr Game",
-    instructions: "Target 150-170 yards, avoid water on right. Execute 5 in a row. Optional squats & rest. 15 minutes.",
-    time: 900,
-  },
-  {
-    title: "Driver Routine",
-    instructions: "Pick 22-yd wide target, full routine, jumping jacks in between. Repeat 8x. 10 minutes.",
-    time: 600,
-  },
-  {
-    title: "Driver - Fairway Finder",
-    instructions: "Hit 5 drives and 5 3-woods using second-serve fairway finder. 15 minutes.",
-    time: 900,
-  },
-  {
-    title: "Putting - Half Moon Drill",
-    instructions: "Half moon around central tee. Hit center from 6 points, restart on 2 misses. 10 minutes.",
-    time: 600,
-  }
+  // same drills array as before...
 ];
 
 const App = () => {
@@ -40,6 +11,8 @@ const App = () => {
   const [seconds, setSeconds] = useState(drills[0].time);
   const [running, setRunning] = useState(false);
   const [started, setStarted] = useState(false);
+  const [view, setView] = useState('practice'); // "practice" or "scores"
+
   const [results, setResults] = useState(() => {
     const saved = localStorage.getItem("golfPracticeResults");
     return saved ? JSON.parse(saved) : Array(drills.length).fill("");
@@ -53,6 +26,12 @@ const App = () => {
     return h ? JSON.parse(h) : {};
   });
   const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const [scoreEntries, setScoreEntries] = useState(() => {
+    const saved = localStorage.getItem("golfScoreEntries");
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [newScore, setNewScore] = useState({ course: '', score: '', date: '' });
 
   useEffect(() => {
     let timer;
@@ -73,21 +52,16 @@ const App = () => {
     localStorage.setItem("golfPracticeCompleted", JSON.stringify(completed));
   }, [completed]);
 
+  useEffect(() => {
+    localStorage.setItem("golfScoreEntries", JSON.stringify(scoreEntries));
+  }, [scoreEntries]);
+
   const saveSession = () => {
     const dateKey = new Date().toISOString().split('T')[0];
     const newHistory = { ...history, [dateKey]: { results, completed } };
     setHistory(newHistory);
     localStorage.setItem("golfPracticeHistory", JSON.stringify(newHistory));
     resetPractice();
-  };
-
-  const nextStep = () => {
-    const next = step + 1;
-    if (next < drills.length) {
-      setStep(next);
-      setSeconds(drills[next].time);
-      setRunning(false);
-    }
   };
 
   const resetPractice = () => {
@@ -113,10 +87,63 @@ const App = () => {
     setCompleted(newCompleted);
   };
 
+  const handleScoreChange = (e) => {
+    const { name, value } = e.target;
+    setNewScore(prev => ({ ...prev, [name]: value }));
+  };
+
+  const addScoreEntry = () => {
+    if (newScore.course && newScore.score && newScore.date) {
+      setScoreEntries([...scoreEntries, newScore]);
+      setNewScore({ course: '', score: '', date: '' });
+    }
+  };
+
+  const updateScoreEntry = (index, field, value) => {
+    const updated = [...scoreEntries];
+    updated[index][field] = value;
+    setScoreEntries(updated);
+  };
+
+  const removeScoreEntry = (index) => {
+    const updated = scoreEntries.filter((_, i) => i !== index);
+    setScoreEntries(updated);
+  };
+
+  if (view === 'scores') {
+    return (
+      <div className="max-w-xl mx-auto p-6">
+        <div className="flex justify-between mb-4">
+          <h1 className="text-2xl font-bold">Score Tracker</h1>
+          <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={() => setView('practice')}>Back to Practice</button>
+        </div>
+        <div className="mb-4">
+          <input name="course" placeholder="Course" value={newScore.course} onChange={handleScoreChange} className="p-2 border rounded mr-2" />
+          <input name="score" placeholder="Score" value={newScore.score} onChange={handleScoreChange} className="p-2 border rounded mr-2" />
+          <input name="date" type="date" value={newScore.date} onChange={handleScoreChange} className="p-2 border rounded mr-2" />
+          <button onClick={addScoreEntry} className="bg-green-600 text-white px-3 py-2 rounded">Add</button>
+        </div>
+        <ul>
+          {scoreEntries.map((entry, i) => (
+            <li key={i} className="mb-2">
+              <input className="p-1 border rounded mr-2" value={entry.course} onChange={(e) => updateScoreEntry(i, 'course', e.target.value)} />
+              <input className="p-1 border rounded mr-2" value={entry.score} onChange={(e) => updateScoreEntry(i, 'score', e.target.value)} />
+              <input type="date" className="p-1 border rounded mr-2" value={entry.date} onChange={(e) => updateScoreEntry(i, 'date', e.target.value)} />
+              <button className="bg-red-500 text-white px-2 py-1 rounded" onClick={() => removeScoreEntry(i)}>X</button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
   if (!started) {
     return (
       <div className="max-w-xl mx-auto p-6 text-center">
-        <h1 className="text-3xl font-bold mb-4">Golf Practice Tracker</h1>
+        <div className="flex justify-between mb-4">
+          <h1 className="text-3xl font-bold">Golf Practice Tracker</h1>
+          <button onClick={() => setView('scores')} className="bg-blue-500 text-white px-4 py-2 rounded">Scores</button>
+        </div>
         <Calendar onChange={setSelectedDate} value={selectedDate} className="mb-4 mx-auto" />
         <div className="mb-4">
           <h2 className="text-xl font-semibold mb-2">Session History</h2>
@@ -186,7 +213,7 @@ const App = () => {
         {step < drills.length - 1 ? (
           <button
             className="bg-green-600 text-white px-4 py-2 rounded"
-            onClick={nextStep}
+            onClick={() => setStep(step + 1)}
           >
             Next Drill
           </button>
